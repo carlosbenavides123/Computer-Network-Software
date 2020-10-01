@@ -23,18 +23,23 @@ class ChatApplicationShell(cmd.Cmd):
 		self.map_ip_to_server = {}
 
 		self.create_new_room()
-		self.do_connect(self.client_ip, self.port)
+		# self.do_connect(self.client_ip + " " + self.port)
 
 	def create_new_room(self):
 		self.client_server = SocketServer(self.client_ip, self.port)
 
-	def do_connect(self, remote_host, remote_port):
+	def do_connect(self, line):
 		"""
 		Connect to a remote machine.
+		connect <remote host, remote port>
 		args
 		remote host - remote hosts IP
 		remote port - remote hosts chat port
 		"""
+		split_line = line.split(" ")
+		if len(split_line) != 2:
+			print("Please enter two args only! run 'help connect' for more info.")
+		remote_host, remote_port = split_line
 		if remote_host in self.map_ip_to_port:
 			print("Already connected to %s!"%remote_host)
 			return
@@ -100,6 +105,7 @@ class ChatApplicationShell(cmd.Cmd):
 		for ip in self.connected_remote_hosts:
 			port = self.map_ip_to_port[ip]
 			print(f.format(*[i, ip, port]))
+			i += 1
 
 	def do_send(self, line):
 		"""
@@ -115,14 +121,17 @@ class ChatApplicationShell(cmd.Cmd):
 		if len(split_message) != 2:
 			print("For the send command, please enter two paramters <connection id> <message>, please see 'help send' for more info.")
 			return
+
 		connection_id, message = line.split(" ")
 		if not connection_id.isdigit() or int(connection_id) <= 0:
 			print("For the send command, please enter a valid connection id! (positive integer only!)")
 			return
+
 		connection_id = int(connection_id)
 		if connection_id > len(self.connected_remote_hosts):
 			print("lol..")
 			return
+
 		ip = self.connected_remote_hosts[connection_id - 1]
 		remote_server = self.map_ip_to_server[ip]
 		if remote_server.send_message(message):

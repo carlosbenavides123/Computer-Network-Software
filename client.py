@@ -4,14 +4,13 @@ import socket
 class SocketClient():
     def __init__(self, host, port):
         self.host = host
-        self.port = port
+        self.port = int(port)
         self.connection = None
 
     def connect(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.host, self.port))
-            data = s.recv(1024)
-        print('received', repr(data))
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((self.host, self.port))
+        self.connection = s
 
     def send_message(self, message):
         if not self.connection:
@@ -19,7 +18,10 @@ class SocketClient():
         if not self.connection:
             print("Was not able to connect to {self.host} {self.port}")
             return False
-        self.connection.sendall(b'message')
+        self.connection.sendall(message.encode())
+        data = self.connection.recv(1024)
+        print(data)
         return True
 
 
+# connect 192.168.0.178 3233
