@@ -10,9 +10,13 @@ class ChatApplicationShell(cmd.Cmd):
 		cmd.Cmd.__init__(self)
 		self.prompt = ">> "
 		self.intro = "Welcome to Chat Application!"
-
-		self.client_ip = socket.gethostbyname(socket.gethostname())
 		self.port = port
+		self.client_ip = socket.gethostbyname(socket.gethostname())
+		if self.client_ip == "127.0.0.1":
+			try:
+				self.client_ip = (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
+			except Exception:
+				print("Was not able to find a valid client ip...")
 
 		self.connected_remote_hosts = []
 		self.map_ip_to_port = {}
@@ -39,7 +43,7 @@ class ChatApplicationShell(cmd.Cmd):
 		self.map_ip_to_server[remote_host] = SocketClient(remote_host, remote_port)
 
 	def default(self, line):
-		if line.isnumeric():
+		if str(line).isnumeric():
 			print("Connecting to port %s"%line)
 		else:
 			print("Unrecognized command %s, please enter 'help' for help!"%line)
@@ -67,7 +71,7 @@ class ChatApplicationShell(cmd.Cmd):
 		"""
 		if line != '':
 			self._hist.append(line.strip())
-		if line.isnumeric():
+		if str(line).isdigit():
 			client_ip = self.client_ip
 			self.map_ip_to_port[client_ip] = int(line)
 		return line
@@ -112,7 +116,7 @@ class ChatApplicationShell(cmd.Cmd):
 			print("For the send command, please enter two paramters <connection id> <message>, please see 'help send' for more info.")
 			return
 		connection_id, message = line.split(" ")
-		if not connection_id.isnumeric() or int(connection_id) <= 0:
+		if not str(connection_id).isnumeric() or int(connection_id) <= 0:
 			print("For the send command, please enter a valid connection id! (positive integer only!)")
 			return
 		connection_id = int(connection_id)
