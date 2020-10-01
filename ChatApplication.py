@@ -1,5 +1,6 @@
 import cmd, sys
 import socket
+import bisect
 
 from server import SocketServer
 from client import SocketClient
@@ -13,8 +14,9 @@ class ChatApplicationShell(cmd.Cmd):
 		self.client_ip = socket.gethostbyname(socket.gethostname())
 		self.port = port
 
-		self.connected_remote_hosts = [self.client_ip]
-		self.map_ip_to_port = {self.client_ip: port}
+		self.connected_remote_hosts = []
+		self.map_ip_to_port = {}
+		self.map_ip_to_server = {}
 
 		self.create_new_room()
 		self.do_connect(self.client_ip, self.port)
@@ -32,9 +34,9 @@ class ChatApplicationShell(cmd.Cmd):
 		if remote_host in self.map_ip_to_port:
 			print("Already connected to %s!"%remote_host)
 			return
-		self.client = SocketClient(remote_host, remote_port)
-		self.connected_remote_hosts = bisect.insort_left(self.connected_remote_hosts, remote_port)
+		bisect.insort_left(self.connected_remote_hosts, remote_host)
 		self.map_ip_to_port[remote_host] = remote_port
+		self.map_ip_to_server[remote_host] = SocketClient(remote_host, remote_port)
 
 	def default(self, line):
 		if line.isnumeric():
@@ -54,7 +56,7 @@ class ChatApplicationShell(cmd.Cmd):
 		Sends a shutdown message to the user.
 		Clears up any stateful variable if needed.
 		"""
-		myip = self.grab_ip()
+		myip = self.client_ip
 		if myip in self.map_ip_to_port:
 			del self.map_ip_to_port[myip]
 		print("Bye!")
@@ -66,7 +68,7 @@ class ChatApplicationShell(cmd.Cmd):
 		if line != '':
 			self._hist.append(line.strip())
 		if line.isnumeric():
-			client_ip = self.grab_ip()
+			client_ip = self.client_ip
 			self.map_ip_to_port[client_ip] = int(line)
 		return line
 
@@ -80,11 +82,11 @@ class ChatApplicationShell(cmd.Cmd):
 
 	def do_myip(self, line):
 		"""Get my ip"""
-		print(self.grab_ip())
+		print(self.client_ip)
 
 	def do_myport(self, line):
 		"""Get the port"""
-		print(self.map_ip_to_port[self.grab_ip()])
+		print(self.map_ip_to_port[self.client_ip])
 
 	def do_list(self, line):
 		"""List all the TCP connections you are connected to."""
@@ -95,8 +97,46 @@ class ChatApplicationShell(cmd.Cmd):
 			port = self.map_ip_to_port[ip]
 			print(f.format(*[i, ip, port]))
 
+	def do_send(self, line):
+		"""
+		Send a message to a listed connection id.
+		For example enter 'list' and see this:
+		id: IP address      Port No.
+		1   192.xyz.abc.tuv 5432
+		2   192.qwe.bvc.ijk 3233
+		to send a message to the connection to 192.qwe.bvc.ijk 3233
+		enter 'send 2 Hello'
+		"""
+		split_message = line.split(" ")
+		if len(split_message) != 2:
+			print("For the send command, please enter two paramters <connection id> <message>, please see 'help send' for more info.")
+			return
+		connection_id, message = line.split(" ")
+		if not connection_id.isnumeric() or int(connection_id) <= 0:
+			print("For the send command, please enter a valid connection id! (positive integer only!)")
+			return
+		connection_id = int(connection_id)
+		if connection_id > len(self.connected_remote_hosts):
+			print("lol..")
+			return
+		ip = self.connected_remote_hosts[connection_id - 1]
+		remote_server = self.map_ip_to_server[ip]
+		if remote_server.send_message(message):
+			print("message was sent successfulyt")
+		else:
+			print("failed sending message")
+
+
 	def do_terminate(self, line):
-		"""Terminate the program."""
+		"""
+		Terminate the connection to a listed connection id.
+		For example enter 'list' and see this:
+		id: IP address      Port No.
+		1   192.xyz.abc.tuv 5432
+		2   192.qwe.bvc.ijk 3233
+		to delete the connection to 192.qwe.bvc.ijk 3233
+		enter'teminate 2'
+		"""
 		if not line.isdigit():
 			print("Please enter a positive number to terminate!")
 		_id = int(line)
