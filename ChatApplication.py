@@ -1,11 +1,40 @@
 import cmd, sys
 import socket
 
+from server import SocketServer
+from client import SocketClient
+
 class ChatApplicationShell(cmd.Cmd):
-	def __init__(self):
+	def __init__(self, port):
 		cmd.Cmd.__init__(self)
 		self.prompt = ">> "
 		self.intro = "Welcome to Chat Application!"
+
+		self.client_ip = socket.gethostbyname(socket.gethostname())
+		self.port = port
+
+		self.connected_remote_hosts = [self.client_ip]
+		self.map_ip_to_port = {self.client_ip: port}
+
+		self.create_new_room()
+		self.do_connect(self.client_ip, self.port)
+
+	def create_new_room(self):
+		self.client_server = SocketServer(self.client_ip, self.port)
+
+	def do_connect(self, remote_host, remote_port):
+		"""
+		Connect to a remote machine.
+		args
+		remote host - remote hosts IP
+		remote port - remote hosts chat port
+		"""
+		if remote_host in self.map_ip_to_port:
+			print("Already connected to %s!"%remote_host)
+			return
+		self.client = SocketClient(remote_host, remote_port)
+		self.connected_remote_hosts = bisect.insort_left(self.connected_remote_hosts, remote_port)
+		self.map_ip_to_port[remote_host] = remote_port
 
 	def default(self, line):
 		if line.isnumeric():
@@ -19,7 +48,6 @@ class ChatApplicationShell(cmd.Cmd):
 		"""
 		cmd.Cmd.preloop(self)
 		self._hist = []
-		self.map_ip_to_port = {}
 
 	def postloop(self):
 		"""
@@ -31,9 +59,6 @@ class ChatApplicationShell(cmd.Cmd):
 			del self.map_ip_to_port[myip]
 		print("Bye!")
 
-	def grab_ip(self):
-		return socket.gethostbyname(socket.gethostname())
-
 	def precmd(self, line):
 		"""
 		Add commands to self._hist variable.
@@ -41,9 +66,8 @@ class ChatApplicationShell(cmd.Cmd):
 		if line != '':
 			self._hist.append(line.strip())
 		if line.isnumeric():
-			print(line)
-			user_ip = self.grab_ip()
-			self.map_ip_to_port[user_ip] = int(line)
+			client_ip = self.grab_ip()
+			self.map_ip_to_port[client_ip] = int(line)
 		return line
 
 	def do_hist(self, args):
@@ -51,38 +75,47 @@ class ChatApplicationShell(cmd.Cmd):
 		print(self._hist)
 
 	def do_exit(self, line):
+		"""Exit the application"""
 		return -1
 
 	def do_myip(self, line):
+		"""Get my ip"""
 		print(self.grab_ip())
 
 	def do_myport(self, line):
+		"""Get the port"""
 		print(self.map_ip_to_port[self.grab_ip()])
 
 	def do_list(self, line):
+		"""List all the TCP connections you are connected to."""
 		print('id: IP address         Port No.')
 		f = '{:<2}: {:<15}        {:<5}' #format
 		i = 1
-		for k in sorted(self.map_ip_to_port.keys()):
-			v = self.map_ip_to_port[k]
-			print(f.format(*[i, k, v]))
+		for ip in self.connected_remote_hosts:
+			port = self.map_ip_to_port[ip]
+			print(f.format(*[i, ip, port]))
 
 	def do_terminate(self, line):
+		"""Terminate the program."""
 		if not line.isdigit():
 			print("Please enter a positive number to terminate!")
 		_id = int(line)
+
 		i = 1
 		key_to_delete = ""
-		for k in sorted(self.map_ip_to_port.keys()):
+		for ip in self.connected_remote_hosts:
 			if i == _id:
-				key_to_delete = k
+				key_to_delete = ip
 				break
-			i += 1
 		if not key_to_delete:
 			print("Please enter a id that is in 'list' command!")
 		else:
 			del[self.map_ip_to_port[key_to_delete]]
+			self.connected_remote_hosts.remove(key_to_delete)
 			print("removed connection id %s"%line)
 
 if __name__ == '__main__':
-	ChatApplicationShell().cmdloop()
+	print('Number of arguments:', len(sys.argv), 'arguments.')
+	print('Argument List:', str(sys.argv))
+	port = sys.argv[1]
+	ChatApplicationShell(port).cmdloop()
