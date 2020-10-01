@@ -43,7 +43,7 @@ class ChatApplicationShell(cmd.Cmd):
 		self.map_ip_to_server[remote_host] = SocketClient(remote_host, remote_port)
 
 	def default(self, line):
-		if str(line).isnumeric():
+		if line.isdigit():
 			print("Connecting to port %s"%line)
 		else:
 			print("Unrecognized command %s, please enter 'help' for help!"%line)
@@ -71,7 +71,7 @@ class ChatApplicationShell(cmd.Cmd):
 		"""
 		if line != '':
 			self._hist.append(line.strip())
-		if str(line).isdigit():
+		if line.isdigit():
 			client_ip = self.client_ip
 			self.map_ip_to_port[client_ip] = int(line)
 		return line
@@ -116,7 +116,7 @@ class ChatApplicationShell(cmd.Cmd):
 			print("For the send command, please enter two paramters <connection id> <message>, please see 'help send' for more info.")
 			return
 		connection_id, message = line.split(" ")
-		if not str(connection_id).isnumeric() or int(connection_id) <= 0:
+		if not connection_id.isdigit() or int(connection_id) <= 0:
 			print("For the send command, please enter a valid connection id! (positive integer only!)")
 			return
 		connection_id = int(connection_id)
