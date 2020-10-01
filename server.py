@@ -17,7 +17,7 @@ class SocketServer(Thread):
         while True:
             try:
                 conn, addr = self.s.accept()
-                print("Connected to %s"%conn)
+                print("Connected to %s"%addr)
                 message = conn.recv(1024)
                 conn.sendall(message)
                 print(message)
