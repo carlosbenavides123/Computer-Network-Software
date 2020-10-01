@@ -119,24 +119,26 @@ class ChatApplicationShell(cmd.Cmd):
 		enter 'send 2 Hello'
 		"""
 		split_message = line.split(" ")
-		if len(split_message) != 2:
+		if len(split_message) < 2:
 			print("For the send command, please enter two paramters <connection id> <message>, please see 'help send' for more info.")
 			return
 
-		connection_id, message = line.split(" ")
+		connection_id = split_message[0]
 		if not connection_id.isdigit() or int(connection_id) <= 0:
 			print("For the send command, please enter a valid connection id! (positive integer only!)")
 			return
-
 		connection_id = int(connection_id)
 		if connection_id > len(self.connected_remote_hosts):
-			print("lol..")
+			print("Cannot connect to that!")
 			return
-
+		message = ' '.join(split_message[1:])
+		if len(message) > 100:
+			print("message is too big to send! please enter a shorter message!")
+			return
 		ip = self.connected_remote_hosts[connection_id - 1]
 		remote_server = self.map_ip_to_server[ip]
 		if remote_server.send_message(message):
-			print("message was sent successfulyt")
+			print("message was sent successfully")
 		else:
 			print("failed sending message")
 
