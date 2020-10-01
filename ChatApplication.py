@@ -68,6 +68,7 @@ class ChatApplicationShell(cmd.Cmd):
 		myip = self.client_ip
 		if myip in self.map_ip_to_port:
 			del self.map_ip_to_port[myip]
+		self.client_server.stop()
 		print("Bye!")
 
 	def precmd(self, line):

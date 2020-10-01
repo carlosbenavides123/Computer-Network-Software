@@ -1,25 +1,30 @@
-
-import socket
+import socket, time
 from threading import *
+from multiprocessing import *
 
 class SocketServer(Thread):
     def __init__(self, host, port):
         Thread.__init__(self)
         self.host = host
         self.port = int(port)
+        self.killed = False
         self.start()
 
     def run(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((self.host, self.port))
-            s.listen()
-            conn, addr = s.accept()
-            while conn:
-                print('Connected by', addr)
-                while True:
-                    data = conn.recv(1024)
-                    print(data)
-                    if not data:
-                        break
-                    conn.sendall(data)
-        print("ended server")
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.bind((self.host, self.port))
+        self.s.listen(5)
+        while True:
+            try:
+                conn, addr = self.s.accept()
+                print("Connected to %s"%conn)
+                message = conn.recv(1024)
+                conn.sendall(message)
+                print(message)
+            except:
+                print("Shutting down server...")
+                break
+
+    def stop(self):
+        self.s.close()
+        time.sleep(1)
