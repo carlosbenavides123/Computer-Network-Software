@@ -23,7 +23,8 @@ class ChatApplicationShell(cmd.Cmd):
 		self.map_ip_to_server = {}
 
 		self.create_new_room()
-		# self.do_connect(self.client_ip + " " + self.port)
+		# self.do_connect(self.client_ip + " " + self.port) <- uncomment if you are using more than 1 machine
+		# commenting this line allows u to have multiple ip connections to only one machine
 
 	def create_new_room(self):
 		self.client_server = SocketServer(self.client_ip, self.port)
@@ -43,9 +44,14 @@ class ChatApplicationShell(cmd.Cmd):
 		if remote_host in self.map_ip_to_port:
 			print("Already connected to %s!"%remote_host)
 			return
-		bisect.insort_left(self.connected_remote_hosts, remote_host)
-		self.map_ip_to_port[remote_host] = remote_port
-		self.map_ip_to_server[remote_host] = SocketClient(remote_host, remote_port)
+		socket_client = SocketClient(remote_host, remote_port)
+		if socket_client.connect():
+			print("Successfully connected to %s:%s"%(remote_host, remote_port))
+			self.map_ip_to_server[remote_host] = socket_client
+			bisect.insort_left(self.connected_remote_hosts, remote_host)
+			self.map_ip_to_port[remote_host] = remote_port
+		else:
+			print("Connection to %s:%s failed!"%(remote_host, remote_port))
 
 	def default(self, line):
 		if line.isdigit():
@@ -88,6 +94,8 @@ class ChatApplicationShell(cmd.Cmd):
 
 	def do_exit(self, line):
 		"""Exit the application"""
+		for i in range(len(self.connected_remote_hosts)):
+			self.do_terminate("1")
 		return -1
 
 	def do_myip(self, line):
@@ -138,9 +146,9 @@ class ChatApplicationShell(cmd.Cmd):
 		ip = self.connected_remote_hosts[connection_id - 1]
 		remote_server = self.map_ip_to_server[ip]
 		if remote_server.send_message(message):
-			print("message was sent successfully")
+			print(f"Successfully sent message to connection {connection_id}")
 		else:
-			print("failed sending message")
+			print(f"Failed sending message to conneciton {connection_id}")
 
 
 	def do_terminate(self, line):
@@ -158,20 +166,20 @@ class ChatApplicationShell(cmd.Cmd):
 		_id = int(line)
 
 		i = 1
-		key_to_delete = ""
+		ip_to_delete = ""
 		for ip in self.connected_remote_hosts:
 			if i == _id:
-				key_to_delete = ip
+				ip_to_delete = ip
 				break
-		if not key_to_delete:
+		if not ip_to_delete:
 			print("Please enter a id that is in 'list' command!")
-		else:
-			del[self.map_ip_to_port[key_to_delete]]
-			self.connected_remote_hosts.remove(key_to_delete)
-			print("removed connection id %s"%line)
+			return
+		port = self.map_ip_to_port[ip_to_delete]
+		socket_connection = self.map_ip_to_server[ip_to_delete]
+		if socket_connection.close(self.client_ip, self.map_ip_to_port[self.client_ip]):
+			del[self.map_ip_to_port[ip_to_delete]]
+			self.connected_remote_hosts.remove(ip_to_delete)
 
 if __name__ == '__main__':
-	print('Number of arguments:', len(sys.argv), 'arguments.')
-	print('Argument List:', str(sys.argv))
 	port = sys.argv[1]
 	ChatApplicationShell(port).cmdloop()
