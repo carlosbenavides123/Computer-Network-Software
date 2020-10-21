@@ -18,3 +18,19 @@ connect <remote_ip> <remote_port (the port of the connection room)>
 then run list to see the connections connected to
 
 then run send <number from list> <message> i.e. send 1 lol
+
+using one machine
+
+I did the following
+
+cd .\Documents\comp_sci\Computer-Network-Software\
+
+python .\ChatApplication.py 1111
+
+python .\ChatApplication.py 2222
+
+python .\ChatApplication.py 3333
+
+connect 192.168.0.169 3333
+
+use this line on all three terminals ^
